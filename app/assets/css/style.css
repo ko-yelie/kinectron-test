@@ -23,7 +23,7 @@ input[type="file"] {
 
 #custom-file-upload:hover, input[type="button"]:hover, input[type="button"]:active {
   background: #1daad8;
-} 
+}
 
 div.intro {
   font-weight: bold;
@@ -50,7 +50,7 @@ input::-webkit-input-placeholder, input[type="text"] {
 }
 
 input.dimensions {
-  width: 40px; 
+  width: 40px;
 }
 
 #imagesize span {
