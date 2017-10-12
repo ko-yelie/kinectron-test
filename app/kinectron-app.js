@@ -855,14 +855,118 @@ function stopLEInfrared() {
   busy = false;
 }
 
+// Variables
+var balls = [];
+var gravityPos = [];
+var explosionDistance = 2;
+var shouldExplode = false;
+var bgColor = 'white';
+
+var skeletonCanvas;
+var skeletonContext;
+
 function startSkeletonTracking() {
   console.log('starting skeleton');
 
-  var skeletonCanvas = document.getElementById('skeleton-canvas');
-  var skeletonContext = skeletonCanvas.getContext('2d');
+  skeletonCanvas = document.getElementById('skeleton-canvas');
+  skeletonContext = skeletonCanvas.getContext('2d');
 
   resetCanvas('depth');
   canvasState = 'depth';
+
+  // Variables
+  var ballCount = 750;
+  var friction = .995;
+  var jointCount = 25;
+
+  var colors = [
+    '#81C3D7',
+    '#D9DCD6',
+    '#3A7CA5',
+    '#2F6690'
+  ];
+
+  // Utility Functions
+  function randomIntFromRange(min,max) {
+  	return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+
+  function randomeFloatFromRange(min, max){
+    return Math.random() * (max - min) + min;
+  }
+
+  function randomColor(colors) {
+  	return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  // Objects
+  function Ball(px, py, vx, vy, f, radius, color, index) {
+  	this.p = [px, py];
+    this.v = [vx, vy];
+    this.gv = [0, 0];
+    this.gp = 0;
+  	this.radius = radius;
+  	this.color = color;
+    this.f = f;
+    this.index = index % jointCount;
+
+  	this.update = function() {
+      // calculate gravity vector
+      var pos = gravityPos[this.index]
+      this.gv = [pos[0] - this.p[0], pos[1] - this.p[1]];
+
+      // Calculate gravity intensity
+      var a = pos[0] - this.p[0];
+      var b = pos[1] - this.p[1];
+      this.gp = 1 / (Math.sqrt( a*a + b*b ));
+
+      // Explode if needed
+      if (shouldExplode){
+        this.v[0] *= randomeFloatFromRange(-10, 10);
+        this.v[1] *= randomeFloatFromRange(-10, 10);
+      }
+
+      // Reduce ball's own velocity with friction
+      this.v[0] *= this.f;
+      this.v[1] *= this.f;
+
+      // Calculate new velocity, add gravity
+      this.v[0] += this.gv[0] * this.gp * this.f;
+      this.v[1] += this.gv[1] * this.gp * this.f;
+
+      // Move
+  		this.p[0] += this.v[0];
+  		this.p[1] += this.v[1];
+  		this.draw();
+  	};
+
+  	this.draw = function() {
+      skeletonContext.save();
+  		skeletonContext.beginPath();
+  		skeletonContext.arc(this.p[0], this.p[1], this.radius, 0, Math.PI * 2, false);
+  		skeletonContext.fillStyle = this.color;
+  		skeletonContext.fill();
+  		skeletonContext.closePath();
+      skeletonContext.restore();
+  	};
+  }
+
+  // init
+  for(var i = 0 ; i < jointCount ; i++){
+    gravityPos.push([skeletonCanvas.width / 2, skeletonCanvas.height / 2]);
+  }
+  balls = [];
+  for(var i = 0 ; i < ballCount ; i++){
+    var rd = randomeFloatFromRange(1, 7);
+    var px = randomeFloatFromRange(0, skeletonCanvas.width / 3) + (skeletonCanvas.width / 3);
+    var py = randomeFloatFromRange(0, skeletonCanvas.height / 3) + (skeletonCanvas.height / 3);
+    var vx = randomeFloatFromRange(-10, 10);
+    var vy = randomeFloatFromRange(-10, 10);
+    var f = friction;
+    balls.push(new Ball(px, py, vx, vy, f, rd, randomColor(colors), i));
+  }
+
+  animate(skeletonCanvas, skeletonContext);
 
   if(kinect.open()) {
     kinect.on('bodyFrame', function(bodyFrame){
@@ -1002,47 +1106,6 @@ function startMulti(multiFrames) {
         multiToSend.rawDepth = temp;
       }
 
-      // TO DO Integrate into interface
-      // if (frame.depthColor) {
-      //   resetCanvas('depth');
-      //   canvasState = 'depth';
-      //   setImageData();
-
-      //   newPixelData = frame.depthColor.buffer;
-      //   processColorBuffer(newPixelData);
-      //   temp = drawImageToCanvas(null, 'jpeg');
-      //   multiToSend.depthColor = temp;
-
-      // }
-
-      // function drawColorBuffer(imageBuffer) {
-      //   if(busy) {
-      //     return;
-      //   }
-      //   busy = true;
-      //   var newPixelData = new Uint8Array(imageBuffer);
-      //   for (var i = 0; i < imageDataSize; i++) {
-      //     imageDataArray[i] = newPixelData[i];
-      //   }
-      //   context.putImageData(imageData, 0, 0);
-      //   busy = false;
-      //   // send really low quality image data to prioritize depth data
-      //   return canvas.toDataURL("image/jpeg", 0.1);
-      // }
-
-
-      // TO DO Implement depthColor and bodyIndexColor -- RGBD?
-
-      // Used in greenkey
-      // if (frame.bodyIndexColor) {
-      // }
-
-      //Frame rate limiting
-      // if (Date.now() > sentTime + 40) {
-      //   sendToPeer('multiFrame', multiToSend);
-      //   sentTime = Date.now();
-      // }
-
       // No Framerate limiting
       sendToPeer('multiFrame', multiToSend);
 
@@ -1123,183 +1186,6 @@ function stopKey() {
   canvasState = null;
   busy = false;
 }
-
-
-// function startFHJoint() {
-
-//   resetCanvas('color');
-//   canvasState = 'color';
-//   setImageData();
-
-//   trackedBodyIndex = -1;
-
-//   if(kinect.open()) {
-//     kinect.on('multiSourceFrame', function(frame){
-
-//       if(busy) {
-//         return;
-//       }
-//       busy = true;
-
-//       // draw color image to canvas
-//       var newPixelData = frame.color.buffer;
-//       for (var i = 0; i < imageDataSize; i++) {
-//         imageDataArray[i] = newPixelData[i];
-//       }
-
-//       //drawImageToCanvas('fhcolor', 'jpeg');
-
-//       // get closest body
-//       var closestBodyIndex = getClosestBodyIndex(frame.body.bodies);
-//       if(closestBodyIndex !== trackedBodyIndex) {
-//         if(closestBodyIndex > -1) {
-//           kinect.trackPixelsForBodyIndices([closestBodyIndex]);
-//         } else {
-//           kinect.trackPixelsForBodyIndices(false);
-//         }
-//       }
-//       else {
-//         if(closestBodyIndex > -1) {
-//           //measure distance from floor
-//           if(frame.body.floorClipPlane)
-//           {
-//             //get position of left hand
-//             var joint = frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.handLeft];
-
-//             //https://social.msdn.microsoft.com/Forums/en-US/594cf9ed-3fa6-4700-872c-68054cac5bf0/angle-of-kinect-device-and-effect-on-xyz-positional-data?forum=kinectv2sdk
-//             var cameraAngleRadians= Math.atan(frame.body.floorClipPlane.z / frame.body.floorClipPlane.y);
-//             var cosCameraAngle = Math.cos(cameraAngleRadians);
-//             var sinCameraAngle = Math.sin(cameraAngleRadians);
-//             var yprime = joint.cameraY * cosCameraAngle + joint.cameraZ * sinCameraAngle;
-//             var jointDistanceFromFloor = frame.body.floorClipPlane.w + yprime;
-
-//             //show height in canvas
-//             showHeight(context, joint, jointDistanceFromFloor);
-//             showHeight(outputContext, joint, jointDistanceFromFloor);
-
-//             //send height data to remote
-//             var jointDataToSend = {joint: joint, distance: jointDistanceFromFloor};
-
-//             sendToPeer('floorHeightTracker', jointDataToSend);
-//           }
-//         }
-//       }
-
-//       trackedBodyIndex = closestBodyIndex;
-//       busy = false;
-//     });
-
-//     kinect.openMultiSourceReader({
-//       frameTypes: Kinect2.FrameType.body | Kinect2.FrameType.color
-//     });
-//   }
-// }
-
-// function stopFHJoint() {
-//   console.log('stopping FHJoint');
-//   kinect.closeMultiSourceReader();
-//   kinect.removeAllListeners();
-//   canvasState = null;
-//   busy = false;
-// }
-
-// function startScaleUser() {
-//   console.log('start scale user');
-
-//   resetCanvas('color');
-//   canvasState = 'color';
-//   setImageData();
-
-//   trackedBodyIndex = -1;
-
-//   if(kinect.open()) {
-//   kinect.on('multiSourceFrame', function(frame){
-//     var closestBodyIndex = getClosestBodyIndex(frame.body.bodies);
-//     if(closestBodyIndex !== trackedBodyIndex) {
-//       if(closestBodyIndex > -1) {
-//         kinect.trackPixelsForBodyIndices([closestBodyIndex]);
-//       } else {
-//         kinect.trackPixelsForBodyIndices(false);
-//       }
-//     }
-//     else {
-//       if(closestBodyIndex > -1) {
-//         //get body ground position - when use jumps this point stays on the ground
-//         if(frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.spineMid].floorColorY)
-//         {
-//           //calculate the source rectangle
-//           var leftJoint = frame.body.bodies[closestBodyIndex].joints[0],
-//               topJoint = frame.body.bodies[closestBodyIndex].joints[0],
-//               rightJoint = frame.body.bodies[closestBodyIndex].joints[0];
-//           for(var i = 1; i < frame.body.bodies[closestBodyIndex].joints.length; i++) {
-//             var joint = frame.body.bodies[closestBodyIndex].joints[i];
-//             if(joint.colorX < leftJoint.colorX) {
-//               leftJoint = joint;
-//             }
-//             if(joint.colorX > rightJoint.colorX) {
-//               rightJoint = joint;
-//             }
-//             if(joint.colorY < topJoint.colorY) {
-//               topJoint = joint;
-//             }
-//           }
-
-//           var pixelWidth = calculatePixelWidth(frame.bodyIndexColor.horizontalFieldOfView, frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.spineMid].cameraZ * 1000);
-//           scale = 0.3 * pixelWidth;
-
-//           //head joint is in middle of head, add area (y-distance from neck to head joint) above
-//           topJoint = {
-//             colorX: topJoint.colorX,
-//             colorY: Math.min(topJoint.colorY, frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.head].colorY - (frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.neck].colorY - frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.head].colorY))
-//           };
-//           var srcRect = {
-//             x: leftJoint.colorX * canvas.width,
-//             y: topJoint.colorY * canvas.height,
-//             width: (rightJoint.colorX - leftJoint.colorX) * canvas.width,
-//             height: (frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.spineMid].floorColorY - topJoint.colorY) * canvas.height
-//           };
-//           var dstRect = {
-//             x: outputCanvas.width * 0.5,
-//             y: outputCanvas.height - (srcRect.height * scale),
-//             width: srcRect.width * scale,
-//             height: srcRect.height * scale
-//           };
-//           //center the user horizontally - is not minus half width of image as user might reach to one side or the other
-//           //do minus the space on the left size of the spine
-//           var spaceLeft = frame.body.bodies[closestBodyIndex].joints[Kinect2.JointType.spineMid].colorX - leftJoint.colorX;
-//           dstRect.x -= (spaceLeft * canvas.width * scale);
-
-//           newPixelData = frame.bodyIndexColor.bodies[closestBodyIndex].buffer;
-
-//           for (var i = 0; i < imageDataSize; i++) {
-//             imageDataArray[i] = newPixelData[i];
-//           }
-
-//           drawImageToCanvas('scaleuser', 'png');
-//           }
-//       }
-//     }
-
-//     trackedBodyIndex = closestBodyIndex;
-//   });
-
-//   //include the projected floor positions - we want to keep the floor on the bottom, not crop out the user in the middle of a jump
-//   kinect.openMultiSourceReader({
-//     frameTypes: Kinect2.FrameType.body | Kinect2.FrameType.bodyIndexColor,
-//     includeJointFloorData: true
-//   });
-// }
-// }
-
-// function stopScaleUser() {
-//   console.log('stop scale user');
-//   kinect.closeMultiSourceReader();
-//   kinect.removeAllListeners();
-//   canvasState = null;
-//   busy = false;
-// }
-
-
 
 function loadFile(e) {
   window.location.href = e.target.files[0].path;
@@ -1421,31 +1307,55 @@ function calculatePixelWidth(horizontalFieldOfView, depth) {
   return pixelWidth / numPixels;
 }
 
-// function showHeight(context, joint, jointDistance) {
-//   context.clearRect(0, 0, canvas.width, canvas.height);
-//   outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
-//   context.beginPath();
-//   context.fillStyle = 'red';
-//   context.arc(joint.colorX * context.canvas.width, joint.colorY * context.canvas.height, 10, 0, Math.PI * 2, true);
-//   context.fill();
-//   context.closePath();
-//   context.font = '48px sans';
-//   context.fillText(jointDistance.toFixed(2) + 'm', 20 + joint.colorX * context.canvas.width, joint.colorY * context.canvas.height);
-// }
+// animate balls
+function animate() {
+	requestAnimationFrame(animate);
+  clearCanvas();
+  // updateShouldExplode();
+  for(let i = 0, l = balls.length; i < l; i++){
+    balls[i].update();
+  }
+}
+
+function clearCanvas(){
+  if(bgColor){
+    skeletonContext.save();
+    skeletonContext.fillStyle = bgColor;
+    skeletonContext.fillRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
+    skeletonContext.restore();
+  }else{
+    skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
+  }
+}
+
+// Skeleton variables
+var skeletonColors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff'];
 
 function drawSkeleton(inCanvas, inContext, body, index) {
-  // Skeleton variables
-  var colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff'];
   //draw joints
   for(var jointType in body.joints) {
     var joint = body.joints[jointType];
-    inContext.fillStyle = colors[index];
-    inContext.fillRect(joint.depthX * inCanvas.width, joint.depthY * inCanvas.height, 5, 5);
+    inContext.fillStyle = skeletonColors[index];
+    var x = joint.depthX * inCanvas.width;
+    var y = joint.depthY * inCanvas.height;
+    inContext.fillRect(x, y, 2, 2);
+
+    gravityPos[jointType] = [x, y];
   }
 
   //draw hand states
   updateHandState(inContext, body.leftHandState, body.joints[Kinect2.JointType.handLeft]);
   updateHandState(inContext, body.rightHandState, body.joints[Kinect2.JointType.handRight]);
+}
+
+function updateShouldExplode(){
+  var x = 0;
+  var y = 0;
+  for(var i = 0 ; i < balls.length ; i++){
+    x += balls[i].v[0] < 0 ? balls[i].v[0] * -1 : balls[i].v[0];
+    y += balls[i].v[1] < 0 ? balls[i].v[1] * -1 : balls[i].v[1];
+  }
+  shouldExplode = x / balls.length < explosionDistance && y / balls.length < explosionDistance;
 }
 
 function updateHandState(context, handState, jointPoint) {
