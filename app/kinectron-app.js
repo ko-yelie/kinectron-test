@@ -61,46 +61,10 @@ window.addEventListener('load', init);
 
 
 function init() {
-  var ipAddresses;
-  var allIpAddresses;
-
-  ipAddresses = getIpAddress();
-  allIpAddresses = ipAddresses.join(", ");
-  document.getElementById('ipaddress').innerHTML = allIpAddresses;
-
-  peerIdDisplay = document.getElementById('peerid');
-
   canvas = document.getElementById('inputCanvas');
   context = canvas.getContext('2d');
 
-  setImageData();
-
-  document.getElementById('peersubmit').addEventListener('click', newPeerServer);
-  //document.getElementById('loadfile').addEventListener('change', loadFile);
-  document.getElementById('single-frame-btn').addEventListener('click', toggleFrameType);
-  document.getElementById('multi-frame-btn').addEventListener('click', toggleFrameType);
-  document.getElementById('colorwidth').addEventListener('change', updateDimFields);
-  document.getElementById('colorheight').addEventListener('change', updateDimFields);
-  document.getElementById('depthwidth').addEventListener('change', updateDimFields);
-  document.getElementById('depthheight').addEventListener('change', updateDimFields);
-  document.getElementById('colorsubmit').addEventListener('click', setOutputDimensions);
-  document.getElementById('depthsubmit').addEventListener('click', setOutputDimensions);
-  document.getElementById('color').addEventListener('click', chooseCamera);
-  document.getElementById('depth').addEventListener('click', chooseCamera);
-  document.getElementById('raw-depth').addEventListener('click', chooseCamera);
-  document.getElementById('infrared').addEventListener('click', chooseCamera);
-  document.getElementById('le-infrared').addEventListener('click', chooseCamera);
-  document.getElementById('key').addEventListener('click', chooseCamera);
-  //document.getElementById('fh-joint').addEventListener('click', chooseCamera);
-  //document.getElementById('scale').addEventListener('click', chooseCamera);
-  document.getElementById('body').addEventListener('click', chooseCamera);
-  document.getElementById('skeleton').addEventListener('click', chooseCamera);
-  document.getElementById('stop-all').addEventListener('click', chooseCamera);
-  document.getElementById('multi').addEventListener('click', chooseMulti);
-  document.getElementById('stop-multi').addEventListener('click', stopMulti);
-  document.getElementById('advanced-link').addEventListener('click', toggleAdvancedOptions);
-  document.getElementById('record').addEventListener('click', toggleRecord);
-  document.getElementById('api-blocker').addEventListener('click', toggleAPIBlocker);
+  startSkeletonTracking();
 }
 
 function toggleAPIBlocker(evt) {
@@ -344,9 +308,6 @@ function initpeer() {
 
     peer.on('open', function(id) {
       myPeerId = id;
-      peerIdDisplay.innerHTML = myPeerId;
-      document.getElementById('port').innerHTML = peer.options.port;
-      document.getElementById('newipaddress').innerHTML = peer.options.host;
   });
 
   peer.on('connection', function(conn) {
@@ -1351,9 +1312,6 @@ function setImageData() {
 }
 
 function resetCanvas(size) {
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  //outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
-
   switch (size) {
     case 'depth':
       canvas.width = DEPTHWIDTH;
@@ -1482,7 +1440,7 @@ function drawSkeleton(inCanvas, inContext, body, index) {
   for(var jointType in body.joints) {
     var joint = body.joints[jointType];
     inContext.fillStyle = colors[index];
-    inContext.fillRect(joint.depthX * inCanvas.width, joint.depthY * inCanvas.height, 10, 10);
+    inContext.fillRect(joint.depthX * inCanvas.width, joint.depthY * inCanvas.height, 5, 5);
   }
 
   //draw hand states
@@ -1511,7 +1469,7 @@ function updateHandState(context, handState, jointPoint) {
 }
 
 function drawHand(context, jointPoint, handColor) {
-  var HANDSIZE = 20;
+  var HANDSIZE = 50;
   // draw semi transparent hand cicles
   var handData = {depthX: jointPoint.depthX, depthY: jointPoint.depthY, handColor: handColor, handSize: HANDSIZE};
   //sendToPeer('drawHand', handData);
