@@ -864,12 +864,15 @@ var bgColor = 'white';
 
 var skeletonCanvas;
 var skeletonContext;
+var dataEl;
 
 function startSkeletonTracking() {
   console.log('starting skeleton');
 
   skeletonCanvas = document.getElementById('skeleton-canvas');
   skeletonContext = skeletonCanvas.getContext('2d');
+
+  dataEl = document.getElementById('data');
 
   resetCanvas('depth');
   canvasState = 'depth';
@@ -922,8 +925,8 @@ function startSkeletonTracking() {
 
       // Explode if needed
       if (shouldExplode){
-        this.v[0] *= randomeFloatFromRange(-10, 10);
-        this.v[1] *= randomeFloatFromRange(-10, 10);
+        this.v[0] *= randomeFloatFromRange(-5, 5);
+        this.v[1] *= randomeFloatFromRange(-5, 5);
       }
 
       // Reduce ball's own velocity with friction
@@ -957,11 +960,11 @@ function startSkeletonTracking() {
   }
   balls = [];
   for(var i = 0 ; i < ballCount ; i++){
-    var rd = randomeFloatFromRange(1, 7);
-    var px = randomeFloatFromRange(0, skeletonCanvas.width / 3) + (skeletonCanvas.width / 3);
-    var py = randomeFloatFromRange(0, skeletonCanvas.height / 3) + (skeletonCanvas.height / 3);
-    var vx = randomeFloatFromRange(-10, 10);
-    var vy = randomeFloatFromRange(-10, 10);
+    var rd = randomeFloatFromRange(1, 3);
+    var px = randomeFloatFromRange(0, skeletonCanvas.width / 15) + (skeletonCanvas.width / 2);
+    var py = randomeFloatFromRange(0, skeletonCanvas.height / 15) + (skeletonCanvas.height / 2);
+    var vx = randomeFloatFromRange(-1, 1);
+    var vy = randomeFloatFromRange(-1, 1);
     var f = friction;
     balls.push(new Ball(px, py, vx, vy, f, rd, randomColor(colors), i));
   }
@@ -1336,9 +1339,10 @@ function drawSkeleton(inCanvas, inContext, body, index) {
   for(var jointType in body.joints) {
     var joint = body.joints[jointType];
     inContext.fillStyle = skeletonColors[index];
-    var x = -joint.depthX * inCanvas.width;
+    var x = joint.depthX * inCanvas.width;
     var y = joint.depthY * inCanvas.height;
-    inContext.fillRect(x, y, 2, 2);
+    dataEl.innerHTML = joint.depthX + ', ' + inCanvas.width;
+    inContext.fillRect(x, y, 10, 10);
 
     gravityPos[jointType] = [x, y];
   }
@@ -1379,7 +1383,7 @@ function updateHandState(context, handState, jointPoint) {
 }
 
 function drawHand(context, jointPoint, handColor) {
-  var HANDSIZE = 50;
+  var HANDSIZE = 30;
   // draw semi transparent hand cicles
   var handData = {depthX: jointPoint.depthX, depthY: jointPoint.depthY, handColor: handColor, handSize: HANDSIZE};
   //sendToPeer('drawHand', handData);
