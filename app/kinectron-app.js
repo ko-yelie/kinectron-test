@@ -1336,7 +1336,7 @@ function drawSkeleton(inCanvas, inContext, body, index) {
   for(var jointType in body.joints) {
     var joint = body.joints[jointType];
     inContext.fillStyle = skeletonColors[index];
-    var x = joint.depthX * inCanvas.width;
+    var x = -joint.depthX * inCanvas.width;
     var y = joint.depthY * inCanvas.height;
     inContext.fillRect(x, y, 2, 2);
 
