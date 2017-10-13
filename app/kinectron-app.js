@@ -879,7 +879,7 @@ function startSkeletonTracking() {
 
   // Variables
   var ballCount = 750;
-  var friction = .995;
+  var friction = .965;
   var jointCount = 25;
 
   var colors = [
@@ -1302,24 +1302,6 @@ function getClosestBodyIndex(bodies) {
     }
   }
   return closestBodyIndex;
-}
-
-function calculateLength(joints) {
-  var length = 0;
-  var numJoints = joints.length;
-  for(var i = 1; i < numJoints; i++) {
-    length += Math.sqrt(Math.pow(joints[i].colorX - joints[i-1].colorX, 2) + Math.pow(joints[i].colorY - joints[i-1].colorY, 2));
-  }
-  return length;
-}
-
-function calculatePixelWidth(horizontalFieldOfView, depth) {
-  // measure the size of the pixel
-  var hFov = horizontalFieldOfView / 2;
-  var numPixels = canvas.width / 2;
-  var T = Math.tan((Math.PI * 180) / hFov);
-  var pixelWidth = T * depth;
-  return pixelWidth / numPixels;
 }
 
 // animate balls
