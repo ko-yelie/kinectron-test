@@ -1002,7 +1002,19 @@ function startSkeletonTracking() {
       });
     });
     kinect.openBodyReader();
-      }
+
+    // dummy
+    window.addEventListener('mousemove', function (e) {
+      drawSkeleton(skeletonCanvas, skeletonContext, {
+        joints: [
+          {
+            depthX: (1 - (e.clientX / window.innerWidth)),
+            depthY: e.clientY / window.innerHeight
+          }
+        ]
+      }, 0);
+    })
+  }
 
 }
 
