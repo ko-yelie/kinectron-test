@@ -56,6 +56,14 @@ var recordStartTime = 0;
 var bodyChunks = [];
 var mediaRecorders = [];
 
+function getElements (selector, context) {
+  if (typeof context === undefined) {
+    context = document;
+  }
+  var nodeList = context.querySelectorAll(selector);
+  return nodeList ? Array.prototype.slice.call(nodeList, 0) : [];
+}
+
 window.addEventListener('load', initpeer);
 window.addEventListener('load', init);
 
@@ -865,6 +873,9 @@ var bgColor = 'white';
 var skeletonCanvas;
 var skeletonContext;
 var dataEl;
+var buttonsEl;
+var animationId = 0;
+var bodys = [];
 
 function startSkeletonTracking() {
   console.log('starting skeleton');
@@ -873,6 +884,12 @@ function startSkeletonTracking() {
   skeletonContext = skeletonCanvas.getContext('2d');
 
   dataEl = document.getElementById('data');
+  buttonsEl = document.getElementById('buttons');
+  getElements('button', buttonsEl).forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      animationId = e.target.value;
+    });
+  })
 
   resetCanvas('depth');
   canvasState = 'depth';
@@ -969,8 +986,6 @@ function startSkeletonTracking() {
     balls.push(new Ball(px, py, vx, vy, f, rd, randomColor(colors), i));
   }
 
-  animate(skeletonCanvas, skeletonContext);
-
   if(kinect.open()) {
     kinect.on('bodyFrame', function(bodyFrame){
       if(sendAllBodies) {
@@ -995,17 +1010,18 @@ function startSkeletonTracking() {
             }
           }
 
-          drawSkeleton(skeletonCanvas, skeletonContext, body, index);
+          updateBody(body, index)
           index++;
 
         }
       });
     });
     kinect.openBodyReader();
+    animate();
 
     // dummy
     window.addEventListener('mousemove', function (e) {
-      drawSkeleton(skeletonCanvas, skeletonContext, {
+      updateBody({
         joints: [
           {
             depthX: (1 - (e.clientX / window.innerWidth)),
@@ -1308,9 +1324,27 @@ function getClosestBodyIndex(bodies) {
 function animate() {
 	requestAnimationFrame(animate);
   clearCanvas();
-  // updateShouldExplode();
-  for(let i = 0, l = balls.length; i < l; i++){
-    balls[i].update();
+
+  switch (animationId) {
+    case 0:
+      for(let i = 0, l = bodys.length; i < l; i++){
+        drawSkeleton(bodys[i], i)
+      }
+      break;
+    case 1:
+      for(let i = 0, l = bodys.length; i < l; i++){
+        var joint = bodys[i].joints[jointType];
+        gravityPos[jointType] = [joint.x, joint.y];
+      }
+      // updateShouldExplode();
+      for(let i = 0, l = balls.length; i < l; i++){
+        balls[i].update();
+      }
+      break;
+    case 2:
+      break;
+    case 3:
+      break;
   }
 }
 
@@ -1325,25 +1359,38 @@ function clearCanvas(){
   }
 }
 
-// Skeleton variables
-var skeletonColors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff'];
-
-function drawSkeleton(inCanvas, inContext, body, index) {
+function updateBody(body, index) {
   //draw joints
   for(var jointType in body.joints) {
     var joint = body.joints[jointType];
-    inContext.fillStyle = skeletonColors[index];
-    var x = joint.depthX * inCanvas.width;
-    var y = joint.depthY * inCanvas.height;
-    dataEl.innerHTML = joint.depthX + ', ' + inCanvas.width;
-    inContext.fillRect(x, y, 10, 10);
+    var x = joint.depthX * skeletonCanvas.width;
+    var y = joint.depthY * skeletonCanvas.height;
+    dataEl.innerHTML = joint.depthX + ', ' + skeletonCanvas.width;
+    bodys[index] = {
+      joints: {
+        jointType: {
+          x: x,
+          y: y
+        }
+      }
+    };
+  }
+}
 
-    gravityPos[jointType] = [x, y];
+// Skeleton variables
+var skeletonColors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff'];
+
+function drawSkeleton(body, index) {
+  //draw joints
+  for(var jointType in body.joints) {
+    var joint = body.joints[jointType];
+    skeletonContext.fillStyle = skeletonColors[index];
+    skeletonContext.fillRect(joint.x, joint.y, 10, 10);
   }
 
   //draw hand states
-  updateHandState(inContext, body.leftHandState, body.joints[Kinect2.JointType.handLeft]);
-  updateHandState(inContext, body.rightHandState, body.joints[Kinect2.JointType.handRight]);
+  updateHandState(skeletonContext, body.leftHandState, body.joints[Kinect2.JointType.handLeft]);
+  updateHandState(skeletonContext, body.rightHandState, body.joints[Kinect2.JointType.handRight]);
 }
 
 function updateShouldExplode(){
