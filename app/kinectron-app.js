@@ -1054,19 +1054,19 @@ function startSkeletonTracking() {
     animate();
 
     // dummy
-    window.addEventListener('mousemove', function (e) {
-      var joints = [];
-      for(var i = 0 ; i < jointCount ; i++){
-        joints.push({
-          depthX: (1 - (e.clientX / window.innerWidth)),
-          depthY: e.clientY / window.innerHeight
-        });
-      }
-      //console.log(joints);
-      updateBody({
-        joints: joints
-      }, 0);
-    })
+    // window.addEventListener('mousemove', function (e) {
+    //   var joints = [];
+    //   for(var i = 0 ; i < jointCount ; i++){
+    //     joints.push({
+    //       depthX: (1 - (e.clientX / window.innerWidth)),
+    //       depthY: e.clientY / window.innerHeight
+    //     });
+    //   }
+    //   //console.log(joints);
+    //   updateBody({
+    //     joints: joints
+    //   }, 0);
+    // });
   }
 
 }
