@@ -878,6 +878,7 @@ var dataEl;
 var buttonsEl;
 var animationId = 0;
 var bodys = [];
+var changeAnimationId;
 
 function startSkeletonTracking() {
   console.log('starting skeleton');
@@ -896,12 +897,17 @@ function startSkeletonTracking() {
   dataEl = document.getElementById('data');
 
   // change animation
+  changeAnimationId = function (nextId) {
+    animationCanvas[animationId].style.zIndex = 0;
+    animationId = nextId;
+    clearCanvas();
+    animationCanvas[animationId].style.zIndex = 1;
+  };
+
   buttonsEl = document.getElementById('buttons');
   getElements('button', buttonsEl).forEach(function (el) {
     el.addEventListener('click', function (e) {
-      animationCanvas[animationId].style.zIndex = 0;
-      animationId = Number(e.target.value);
-      animationCanvas[animationId].style.zIndex = 1;
+      changeAnimationId(Number(e.target.value));
     });
   })
   animationCanvas[animationId].style.zIndex = 1;
@@ -1243,8 +1249,19 @@ function getClosestBodyIndex(bodies) {
 }
 
 // animate balls
+var isOpenHandState = false;
 function animate() {
 	requestAnimationFrame(animate);
+
+  var body = bodys[0];
+  if (body.rightHandState === Kinect2.HandState.open && body.joints[Kinect2.JointType.handRight].y < 40) {
+    if (!isOpenHandState) {
+      changeAnimationId(animationId >= 2 ? 0 : animationId + 1);
+      isOpenHandState = true;
+    }
+  } else {
+    isOpenHandState = false;
+  }
 
   switch (animationId) {
     case 0:
@@ -1331,7 +1348,6 @@ function drawSkeleton(body, index) {
   updateHandState(skeletonContext, body.rightHandState, body.joints[Kinect2.JointType.handRight]);
 }
 
-var isOpenHandState = false;
 function updateHandState(context, handState, jointPoint) {
   var HANDCLOSEDCOLOR = 'red';
   var HANDOPENCOLOR = 'green';
@@ -1340,28 +1356,17 @@ function updateHandState(context, handState, jointPoint) {
   switch (handState) {
     case Kinect2.HandState.closed:
       drawHand(context, jointPoint, HANDCLOSEDCOLOR);
-      isOpenHandState = false;
     break;
 
     case Kinect2.HandState.open:
       drawHand(context, jointPoint, HANDOPENCOLOR);
-
-      if (!isOpenHandState && jointPoint.y < 10) {
-        animationId++;
-        animationId >= 1 && (animationId = 0);
-        isOpenHandState = true;
-      } else {
-        isOpenHandState = false;
-      }
     break;
 
     case Kinect2.HandState.lasso:
       drawHand(context, jointPoint, HANDLASSOCOLOR);
-      isOpenHandState = false;
     break;
 
     default:
-      isOpenHandState = false;
   }
 }
 
