@@ -27,4 +27,6 @@ canvas {
   top: 0;
   right: 0;
   z-index: 3;
+  background: rgba(255, 255, 255, 0);
+  padding: 3px;
 }

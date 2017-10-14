@@ -872,6 +872,8 @@ var skeletonCanvas;
 var skeletonContext;
 var gravityCanvas;
 var gravityContext;
+var paintCanvas;
+var paintContext;
 var dataEl;
 var buttonsEl;
 var animationId = 0;
@@ -887,6 +889,9 @@ function startSkeletonTracking() {
 
   gravityCanvas = document.getElementById('canvas_1');
   gravityContext = gravityCanvas.getContext('2d');
+
+  paintCanvas = document.getElementById('canvas_2');
+  paintContext = paintCanvas.getContext('2d');
 
   dataEl = document.getElementById('data');
 
@@ -1020,6 +1025,7 @@ function startSkeletonTracking() {
 
       skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
       gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
+      gravityContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
       var index = 0;
       bodyFrame.bodies.forEach(function(body){
         if(body.tracked) {
@@ -1239,15 +1245,16 @@ function getClosestBodyIndex(bodies) {
 // animate balls
 function animate() {
 	requestAnimationFrame(animate);
-  clearCanvas();
 
   switch (animationId) {
     case 0:
+      clearCanvas();
       for(let i = 0, l = bodys.length; i < l; i++){
         drawSkeleton(bodys[i], i)
       }
       break;
     case 1:
+      clearCanvas();
       for(let i = 0, l = bodys.length; i < l; i++){
         var body = bodys[i];
         for(var jointType in body.joints) {
@@ -1261,9 +1268,12 @@ function animate() {
       }
       break;
     case 2:
+      for(let i = 0, l = bodys.length; i < l; i++){
+        paintApp.update(bodys[i]);
+      }
       break;
-    case 3:
-      break;
+    // case 3:
+    //   break;
   }
 }
 
@@ -1278,9 +1288,15 @@ function clearCanvas(){
     gravityContext.fillStyle = bgColor;
     gravityContext.fillRect(0, 0, gravityCanvas.width, gravityCanvas.height);
     gravityContext.restore();
+
+    gravityContext.save();
+    gravityContext.fillStyle = bgColor;
+    gravityContext.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+    gravityContext.restore();
   }else{
     skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
     gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
+    gravityContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   }
 }
 
@@ -1372,3 +1388,76 @@ function updateShouldExplode(){
   }
   shouldExplode = x / balls.length < explosionDistance && y / balls.length < explosionDistance;
 }
+
+// Oil Painting
+// Ported from flash project - http://wonderfl.net/c/92Ul
+//
+//
+function OilPainting(){
+
+	var startPos = {x: window.innerWidth/2, y: window.innerHeight/2};
+	var prevPos = {x: window.innerWidth/2, y: 0};
+	var dist = {x: 0, y: 0};
+	var colour = '#000000';
+
+
+	this.update = function(body) {
+    var rightHandJoint = body.joints[Kinect2.JointType.handRight];
+
+		var distance = Math.sqrt(Math.pow(prevPos.x - startPos.x, 2) +
+								 Math.pow(prevPos.y - startPos.y, 2));
+
+		var a = distance * 10 * (Math.pow(Math.random(), 2) - 0.5);
+
+		var r = Math.random() - 0.5;
+
+		var size = (Math.random() * 5) / distance;
+
+		dist.x = (prevPos.x - startPos.x) * Math.sin(0.5) + startPos.x;
+		dist.y = (prevPos.y - startPos.y) * Math.cos(0.5) + startPos.y;
+
+		startPos.x = prevPos.x;
+		startPos.y = prevPos.y;
+
+		prevPos.x = (rightHandJoint.x);
+		prevPos.y = (rightHandJoint.y);
+
+	   // ------- Draw -------
+	   var lWidth = (Math.random()+20/10-0.5)*size+(1-Math.random()+30/20-0.5)*size;
+	   paintContext.lineWidth = lWidth;
+	   paintContext.strokeWidth = lWidth;
+
+	   paintContext.lineCap = 'round';
+	   paintContext.lineJoin = 'round';
+
+	   paintContext.beginPath();
+	   paintContext.moveTo(startPos.x, startPos.y);
+	   paintContext.quadraticCurveTo(dist.x, dist.y, prevPos.x, prevPos.y);
+
+	   paintContext.fillStyle = colour;
+	   paintContext.strokeStyle = colour;
+
+	   paintContext.moveTo(startPos.x + a, startPos.y + a);
+	   paintContext.lineTo(startPos.x + r + a, startPos.y + r + a);
+
+	   paintContext.stroke();
+	   paintContext.fill();
+
+	   paintContext.closePath();
+	}
+
+	var MouseDown = function(e) {
+		e.preventDefault();
+		colour = '#'+Math.floor(Math.random()*16777215).toString(16);
+		paintContext.fillStyle = colour;
+	    paintContext.strokeStyle = colour;
+	}
+
+	var MouseDbl = function(e) {
+		e.preventDefault();
+		paintContext.clearRect(0, 0, width, height);
+	}
+
+}
+
+var paintApp = new OilPainting();
