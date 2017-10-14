@@ -866,7 +866,7 @@ var balls = [];
 var gravityPos = [];
 var explosionDistance = 2;
 var shouldExplode = false;
-var bgColor = 'white';
+var bgColor = '#000000';
 
 var skeletonCanvas;
 var skeletonContext;
@@ -1289,10 +1289,10 @@ function clearCanvas(){
     gravityContext.fillRect(0, 0, gravityCanvas.width, gravityCanvas.height);
     gravityContext.restore();
 
-    gravityContext.save();
-    gravityContext.fillStyle = bgColor;
-    gravityContext.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
-    gravityContext.restore();
+    paintContext.save();
+    paintContext.fillStyle = bgColor;
+    paintContext.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+    paintContext.restore();
   }else{
     skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
     gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
@@ -1396,9 +1396,9 @@ function updateShouldExplode(){
 function OilPainting(){
 
 	var startPos = {x: window.innerWidth/2, y: window.innerHeight/2};
-	var prevPos = {x: window.innerWidth/2, y: 0};
+	var prevPos = {x: window.innerWidth/2, y: window.innerHeight/2};
 	var dist = {x: 0, y: 0};
-	var colour = '#000000';
+	var colour = '#ffffff';
 
 
 	this.update = function(body) {
@@ -1407,7 +1407,7 @@ function OilPainting(){
 		var distance = Math.sqrt(Math.pow(prevPos.x - startPos.x, 2) +
 								 Math.pow(prevPos.y - startPos.y, 2));
 
-		var a = distance * 10 * (Math.pow(Math.random(), 2) - 0.5);
+		var a = distance * 1 * (Math.pow(Math.random(), 2) - 0.5);
 
 		var r = Math.random() - 0.5;
 
