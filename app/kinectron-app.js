@@ -57,9 +57,7 @@ var bodyChunks = [];
 var mediaRecorders = [];
 
 function getElements (selector, context) {
-  if (typeof context === undefined) {
-    context = document;
-  }
+  var context = typeof context !== 'undefined' ?  context : document;
   var nodeList = context.querySelectorAll(selector);
   return nodeList ? Array.prototype.slice.call(nodeList, 0) : [];
 }
@@ -872,6 +870,8 @@ var bgColor = 'white';
 
 var skeletonCanvas;
 var skeletonContext;
+var gravityCanvas;
+var gravityContext;
 var dataEl;
 var buttonsEl;
 var animationId = 0;
@@ -880,16 +880,26 @@ var bodys = [];
 function startSkeletonTracking() {
   console.log('starting skeleton');
 
-  skeletonCanvas = document.getElementById('skeleton-canvas');
+  var animationCanvas = getElements('.animation_canvas')
+
+  skeletonCanvas = document.getElementById('canvas_0');
   skeletonContext = skeletonCanvas.getContext('2d');
 
+  gravityCanvas = document.getElementById('canvas_1');
+  gravityContext = gravityCanvas.getContext('2d');
+
   dataEl = document.getElementById('data');
+
+  // change animation
   buttonsEl = document.getElementById('buttons');
   getElements('button', buttonsEl).forEach(function (el) {
     el.addEventListener('click', function (e) {
-      animationId = e.target.value;
+      animationCanvas[animationId].style.zIndex = 0;
+      animationId = Number(e.target.value);
+      animationCanvas[animationId].style.zIndex = 1;
     });
   })
+  animationCanvas[animationId].style.zIndex = 1;
 
   resetCanvas('depth');
   canvasState = 'depth';
@@ -961,25 +971,36 @@ function startSkeletonTracking() {
   	};
 
   	this.draw = function() {
-      skeletonContext.save();
-  		skeletonContext.beginPath();
-  		skeletonContext.arc(this.p[0], this.p[1], this.radius, 0, Math.PI * 2, false);
-  		skeletonContext.fillStyle = this.color;
-  		skeletonContext.fill();
-  		skeletonContext.closePath();
-      skeletonContext.restore();
+      gravityContext.save();
+  		gravityContext.beginPath();
+  		gravityContext.arc(this.p[0], this.p[1], this.radius, 0, Math.PI * 2, false);
+  		gravityContext.fillStyle = this.color;
+  		gravityContext.fill();
+  		gravityContext.closePath();
+      gravityContext.restore();
   	};
   }
 
   // init
+  for (var i = 0; i < 1; i++) {
+    bodys[i] = {
+      joints: []
+    };
+    for(var j = 0 ; j < jointCount ; j++){
+      bodys[i].joints[j] = {
+        x: skeletonCanvas.width / 2,
+        y: skeletonCanvas.height / 2
+      };
+    }
+  }
   for(var i = 0 ; i < jointCount ; i++){
     gravityPos.push([skeletonCanvas.width / 2, skeletonCanvas.height / 2]);
   }
   balls = [];
   for(var i = 0 ; i < ballCount ; i++){
     var rd = randomeFloatFromRange(1, 3);
-    var px = randomeFloatFromRange(0, skeletonCanvas.width / 15) + (skeletonCanvas.width / 2);
-    var py = randomeFloatFromRange(0, skeletonCanvas.height / 15) + (skeletonCanvas.height / 2);
+    var px = randomeFloatFromRange(0, gravityCanvas.width / 15) + (gravityCanvas.width / 2);
+    var py = randomeFloatFromRange(0, gravityCanvas.height / 15) + (gravityCanvas.height / 2);
     var vx = randomeFloatFromRange(-1, 1);
     var vy = randomeFloatFromRange(-1, 1);
     var f = friction;
@@ -998,6 +1019,7 @@ function startSkeletonTracking() {
       }
 
       skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
+      gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
       var index = 0;
       bodyFrame.bodies.forEach(function(body){
         if(body.tracked) {
@@ -1021,13 +1043,16 @@ function startSkeletonTracking() {
 
     // dummy
     window.addEventListener('mousemove', function (e) {
+      var joints = [];
+      for(var i = 0 ; i < jointCount ; i++){
+        joints.push({
+          depthX: (1 - (e.clientX / window.innerWidth)),
+          depthY: e.clientY / window.innerHeight
+        });
+      }
+      //console.log(joints);
       updateBody({
-        joints: [
-          {
-            depthX: (1 - (e.clientX / window.innerWidth)),
-            depthY: e.clientY / window.innerHeight
-          }
-        ]
+        joints: joints
       }, 0);
     })
   }
@@ -1047,115 +1072,6 @@ function displayCurrentFrames() {
 
   for (var i = 0; i < allFrameDisplay.length; i++) {
     allFrameDisplay[i].innerHTML = currentFrames;
-  }
-}
-
-function startMulti(multiFrames) {
-  console.log('starting multi');
-
-  var options = {frameTypes: multiFrames};
-  var multiToSend = {};
-
-  displayCurrentFrames();
-
-  multiFrame = true;
-  if(kinect.open()) {
-    kinect.on('multiSourceFrame', function(frame) {
-      if(busy) {
-        return;
-      }
-      busy = true;
-
-      var newPixelData;
-      var temp;
-
-      if (frame.color) {
-
-        var colorCanvas = document.getElementById('color-canvas');
-        var colorContext = colorCanvas.getContext('2d');
-
-        resetCanvas('color');
-        canvasState = 'color';
-        setImageData();
-
-        newPixelData = frame.color.buffer;
-        processColorBuffer(newPixelData);
-        temp = drawImageToCanvas(colorCanvas, colorContext, null, 'jpeg');
-        multiToSend.color = temp;
-      }
-
-      if (frame.body) {
-        var skeletonCanvas = document.getElementById('skeleton-canvas');
-        var skeletonContext = skeletonCanvas.getContext('2d');
-
-        if (doRecord) {
-          frame.body.record_startime = recordStartTime;
-          frame.body.record_timestamp = Date.now() - recordStartTime;
-          bodyChunks.push(frame.body);
-        }
-
-        // index used to change colors on draw
-        var index = 0;
-
-        // draw tracked bodies
-        skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
-        frame.body.bodies.forEach(function(body){
-          if(body.tracked) {
-            drawSkeleton(skeletonCanvas, skeletonContext, body, index);
-            index++;
-          }
-        });
-
-        multiToSend.body = frame.body.bodies;
-      }
-
-      if (frame.depth) {
-        var depthCanvas = document.getElementById('depth-canvas');
-        var depthContext = depthCanvas.getContext('2d');
-
-        resetCanvas('depth');
-        canvasState = 'depth';
-        setImageData();
-
-        newPixelData = frame.depth.buffer;
-        processDepthBuffer(newPixelData);
-        temp = drawImageToCanvas(depthCanvas, depthContext, null, 'jpeg');
-        multiToSend.depth = temp;
-      }
-
-      if (frame.rawDepth) {
-        var rawDepthCanvas = document.getElementById('raw-depth-canvas');
-        var rawDepthContext = rawDepthCanvas.getContext('2d');
-
-        resetCanvas('raw');
-        canvasState = 'raw';
-        setImageData();
-
-        newPixelData = frame.rawDepth.buffer;
-        processRawDepthBuffer(newPixelData);
-        temp = drawImageToCanvas(rawDepthCanvas, rawDepthContext, null, 'webp', 1);
-        multiToSend.rawDepth = temp;
-      }
-
-      // No Framerate limiting
-      sendToPeer('multiFrame', multiToSend);
-
-      busy = false;
-
-    }); // kinect.on
-  } // open
-
-      kinect.openMultiSourceReader(options);
-}
-
-function stopMulti() {
-  if (multiFrame) {
-    kinect.closeMultiSourceReader();
-    kinect.removeAllListeners();
-    toggleFeedDiv('multi', 'none');
-    canvasState = null;
-    busy = false;
-    multiFrame = false;
   }
 }
 
@@ -1333,8 +1249,11 @@ function animate() {
       break;
     case 1:
       for(let i = 0, l = bodys.length; i < l; i++){
-        var joint = bodys[i].joints[jointType];
-        gravityPos[jointType] = [joint.x, joint.y];
+        var body = bodys[i];
+        for(var jointType in body.joints) {
+          var joint = body.joints[jointType];
+          gravityPos[jointType] = [joint.x, joint.y];
+        }
       }
       // updateShouldExplode();
       for(let i = 0, l = balls.length; i < l; i++){
@@ -1354,8 +1273,14 @@ function clearCanvas(){
     skeletonContext.fillStyle = bgColor;
     skeletonContext.fillRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
     skeletonContext.restore();
+
+    gravityContext.save();
+    gravityContext.fillStyle = bgColor;
+    gravityContext.fillRect(0, 0, gravityCanvas.width, gravityCanvas.height);
+    gravityContext.restore();
   }else{
     skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
+    gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
   }
 }
 
@@ -1366,13 +1291,9 @@ function updateBody(body, index) {
     var x = joint.depthX * skeletonCanvas.width;
     var y = joint.depthY * skeletonCanvas.height;
     dataEl.innerHTML = joint.depthX + ', ' + skeletonCanvas.width;
-    bodys[index] = {
-      joints: {
-        jointType: {
-          x: x,
-          y: y
-        }
-      }
+    bodys[index].joints[jointType] = {
+      x: x,
+      y: y
     };
   }
 }
@@ -1384,6 +1305,7 @@ function drawSkeleton(body, index) {
   //draw joints
   for(var jointType in body.joints) {
     var joint = body.joints[jointType];
+    //console.log(joint);
     skeletonContext.fillStyle = skeletonColors[index];
     skeletonContext.fillRect(joint.x, joint.y, 10, 10);
   }
@@ -1391,16 +1313,6 @@ function drawSkeleton(body, index) {
   //draw hand states
   updateHandState(skeletonContext, body.leftHandState, body.joints[Kinect2.JointType.handLeft]);
   updateHandState(skeletonContext, body.rightHandState, body.joints[Kinect2.JointType.handRight]);
-}
-
-function updateShouldExplode(){
-  var x = 0;
-  var y = 0;
-  for(var i = 0 ; i < balls.length ; i++){
-    x += balls[i].v[0] < 0 ? balls[i].v[0] * -1 : balls[i].v[0];
-    y += balls[i].v[1] < 0 ? balls[i].v[1] * -1 : balls[i].v[1];
-  }
-  shouldExplode = x / balls.length < explosionDistance && y / balls.length < explosionDistance;
 }
 
 function updateHandState(context, handState, jointPoint) {
@@ -1435,4 +1347,14 @@ function drawHand(context, jointPoint, handColor) {
   context.fill();
   context.closePath();
   context.globalAlpha = 1;
+}
+
+function updateShouldExplode(){
+  var x = 0;
+  var y = 0;
+  for(var i = 0 ; i < balls.length ; i++){
+    x += balls[i].v[0] < 0 ? balls[i].v[0] * -1 : balls[i].v[0];
+    y += balls[i].v[1] < 0 ? balls[i].v[1] * -1 : balls[i].v[1];
+  }
+  shouldExplode = x / balls.length < explosionDistance && y / balls.length < explosionDistance;
 }
