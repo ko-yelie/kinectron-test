@@ -1031,7 +1031,7 @@ function startSkeletonTracking() {
 
       skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
       gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
-      gravityContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+      pointContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
       var index = 0;
       bodyFrame.bodies.forEach(function(body){
         if(body.tracked) {
@@ -1313,7 +1313,7 @@ function clearCanvas(){
   }else{
     skeletonContext.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
     gravityContext.clearRect(0, 0, gravityCanvas.width, gravityCanvas.height);
-    gravityContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+    pointContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
   }
 }
 
